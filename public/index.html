@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data and File Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input[type="text"],
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        #responseOutput {
+            background: #e7f4e4;
+            border: 1px solid #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Upload Data and File</h1>
+        <label for="dataInput">Enter data (comma-separated):</label>
+        <input type="text" id="dataInput" placeholder="A,b,3,7" />
+
+        <label for="fileInput">Choose a file:</label>
+        <input type="file" id="fileInput" />
+
+        <button id="submitButton">Submit</button>
+        <div class="loading" id="loadingIndicator">Loading...</div>
+
+        <h2>Response:</h2>
+        <pre id="responseOutput"></pre>
+    </div>
+
+    <script>
+        document.getElementById('submitButton').addEventListener('click', async () => {
+            const dataInput = document.getElementById('dataInput').value.split(',').map(item => item.trim());
+            const fileInput = document.getElementById('fileInput').files[0];
+            let fileB64 = '';
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const responseOutput = document.getElementById('responseOutput');
+    
+            loadingIndicator.style.display = 'block'; // Show loading indicator
+            responseOutput.textContent = ''; // Clear previous response
+    
+            if (fileInput) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    fileB64 = reader.result.split(',')[1]; // Get the Base64 part
+                    sendData(dataInput, fileB64);
+                };
+                reader.readAsDataURL(fileInput);
+            } else {
+                sendData(dataInput);
+            }
+        });
+    
+        async function sendData(data, fileB64 = null) {
+            const responseOutput = document.getElementById('responseOutput');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            try {
+                const response = await fetch('/bfhl', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data, file_b64: fileB64 })
+                });
+    
+                // Ensure the response is OK before parsing
+                if (!response.ok) {
+                    const errorText = await response.text(); // Get the error message
+                    throw new Error('Network response was not ok: ' + errorText);
+                }
+    
+                const result = await response.json();
+                responseOutput.textContent = JSON.stringify(result, null, 2);
+                loadingIndicator.style.display = 'none'; // Hide loading indicator
+            } catch (error) {
+                responseOutput.textContent = 'Error: ' + error.message;
+                loadingIndicator.style.display = 'none'; // Hide loading indicator
+            }
+        }
+    </script>
+    
+</body>
+</html>
